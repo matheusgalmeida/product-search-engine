@@ -1,4 +1,5 @@
-import undetected_chromedriver as uc
+#import undetected_chromedriver as uc
+from selenium import webdriver
 from a_pandas_ex_css_selector_from_html import pd_add_css_selector_from_html
 import re
 from PrettyColorPrinter import add_printer
@@ -14,7 +15,9 @@ pd_add_css_selector_from_html()
 if __name__ == "__main__":
     url_main = 'https://www.costco.ca'
     url = 'https://www.costco.ca/appliances.html'
-    driver = uc.Chrome()
+    #driver = uc.Chrome(
+    #)
+    driver = webdriver.Chrome()
     driver.get(url)
     
     #pagination_re = 'nav[aria-label="pagination"]'
@@ -26,8 +29,7 @@ if __name__ == "__main__":
 
     current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     df = pd.Q_selector_from_html(driver.page_source, parser="html.parser", ignore_tags=("html", "body"))
-    #main_df = pd.DataFrame(columns=['date_scrape','product_id','sku', 'product_name','price','desc_product','url_scraped','url_images'])
-    df_teste = pd.DataFrame(columns=['Date Scrape', 'Category', 'SKU', 'Costco Id', 'Product Id', 'Name', 'Price', 'Description', 'Url Scraped'])#,'Images Urls']) 
+    df_output = pd.DataFrame(columns=['Date Scrape', 'Category', 'SKU', 'Costco Id', 'Product Id', 'Name', 'Price', 'Description', 'Url Scraped'])#,'Images Urls']) 
     find = r'div[class="col-xs-12 col-lg-6 col-xl-2"]'
     finder = df[df['selector']==find].drop(columns=['group_html','group_selector'])
     category_urls = finder['html'].str.extract(URL_RE, expand=False)
@@ -47,7 +49,7 @@ if __name__ == "__main__":
             next_btn = btn['html'].str.extract(HREF_ID, expand=False)
             
             data_to_append = [] 
-            for href_value, costco_id in zip(product_url.iloc[0:1], costco_id) :
+            for href_value, costco_id in zip(product_url, costco_id) :
                 driver.get(href_value)
                 price_element = driver.find_element(By.ID, 'pull-right-price')
                 if price_element.text.strip() == '':
@@ -66,19 +68,13 @@ if __name__ == "__main__":
                 product_id_text = driver.find_element(By.ID, 'product-body-item-number').text
                 product_id = re.findall(r'\d+', product_id_text)  # Extrai apenas os números
                 product_id = ''.join(product_id) if product_id else None
-                # Encontre o elemento que contém as imagens
-                #img_container = driver.find_element(By.CLASS_NAME, "slick-track")
-                # Encontre todas as tags 'img' dentro do contêiner
-                #img_elements = img_container.find_elements(By.TAG_NAME, "img")
-                #img_sources = [img.get_attribute("src") for img in img_elements if img.get_attribute("src")]
-                #img_sources = df_teste['Images Urls'] = pd.Series([img_sources]*len(df_teste), index=df_teste.index)
                 print(f'Preço: {price}, Category: {category},SKU: {sku}, Costco Id: {costco_id}, Product Id: {product_id}  Name: {title}, Price: {price}  Description: {desc}, Url Scraped: {href_value}')
                 data_to_append.append({'Date Scrape': current_date, 'Category': category,'SKU': sku, 'Costco Id': costco_id, 'Product Id': product_id,  'Name': title, 'Price': price,  'Description': desc, 'Url Scraped': href_value})#,'Images Urls': img_sources})
 
                 
             if data_to_append:
                 df_temp = pd.DataFrame(data_to_append)
-                df_teste = pd.concat([df_teste, df_temp], ignore_index=True)
+                df_output = pd.concat([df_output, df_temp], ignore_index=True)
                 
             if next_btn.empty:
                 print("Moving to the next category...")
@@ -89,8 +85,8 @@ if __name__ == "__main__":
                 count_page += 1
                 print(f'Page {count_page} loaded')
 
-for column in df_teste.columns:
-        if column in df_teste.columns and df_teste[column].dtype == 'object':
-            df_teste[column] = df_teste[column].str.replace('\n', '')
-df_teste.to_csv('example.csv', index=False)
+for column in df_output.columns:
+        if column in df_output.columns and df_output[column].dtype == 'object':
+            df_output[column] = df_output[column].str.replace('\n', '')
+df_output.to_csv('example.csv', index=False)
 driver.quit()
